@@ -119,7 +119,7 @@ class AbstractSNCFKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
         # So we do one VJ search for each headsign to ensure we get it, then deduplicate VJs
         for train_number in headsigns(headsign_str):
 
-            log.debug('searching for vj {} on {} in navitia'.format(train_number, since_dt))
+            log.debug('searching for vj {} during period [{} - {}] in navitia'.format(train_number, extended_since_dt, extended_until_dt))
 
             navitia_vjs = self.navitia.vehicle_journeys(q={
                 'headsign': train_number,

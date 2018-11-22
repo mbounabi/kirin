@@ -323,17 +323,29 @@ def merge(navitia_vj, db_trip_update, new_trip_update, is_new_complete=False):
             for order, st in enumerate(new_trip_update.stop_time_updates):
                 # Find corresponding stop_time in the theoretical VJ
                 vj_st = find_st_in_vj(st.stop_id, new_trip_update.vj.navitia_vj.get('stop_times', []))
-                if vj_st is None and st.departure_status == 'add' or st.arrival_status == 'add':
-                    # It is an added stop_time, create a new stop time
-                    st_timezone = pytz.timezone(st.navitia_stop.get('stop_area').get('timezone'))
-                    added_st = {
-                        'stop_point': st.navitia_stop,
-                        'departure_time': convert_to_local_time(st_timezone, st.departure),
-                        'arrival_time': convert_to_local_time(st_timezone, st.arrival),
-                        'departure_status': st.departure_status,
-                        'arrival_status': st.arrival_status
-                    }
-                    yield order, added_st
+                if vj_st is None:
+                    if st.departure_status == 'add' or st.arrival_status == 'add':
+                        # It is an added stop_time, create a new stop time
+                        st_timezone = pytz.timezone(st.navitia_stop.get('stop_area').get('timezone'))
+                        added_st = {
+                            'stop_point': st.navitia_stop,
+                            'departure_time': convert_to_local_time(st_timezone, st.departure),
+                            'arrival_time': convert_to_local_time(st_timezone, st.arrival),
+                            'departure_status': st.departure_status,
+                            'arrival_status': st.arrival_status
+                        }
+                        yield order, added_st
+                    elif st.departure_status == 'delete' or st.arrival_status == 'delete':
+                        # The deleted stop_time isn't in the vj, so it was previously added
+                        st_timezone = pytz.timezone(st.navitia_stop.get('stop_area').get('timezone'))
+                        deleted_st = {
+                            'stop_point': st.navitia_stop,
+                            'departure_time': convert_to_local_time(st_timezone, st.departure),
+                            'arrival_time': convert_to_local_time(st_timezone, st.arrival),
+                            'departure_status': st.departure_status,
+                            'arrival_status': st.arrival_status
+                        }
+                        yield order, deleted_st
                 else:
                     yield order, vj_st
 
@@ -345,7 +357,7 @@ def merge(navitia_vj, db_trip_update, new_trip_update, is_new_complete=False):
     has_changes = False
     for nav_order, navitia_stop in get_next_stop():
         if navitia_stop is None:
-            logging.getLogger(__name__).warning('No stop point found (order:{}'.format(nav_order))
+            logging.getLogger(__name__).warning('No stop point found (order:{})'.format(nav_order))
             continue
 
         # TODO handle forbidden pickup/dropoff (in those case set departure/arrival at None)
